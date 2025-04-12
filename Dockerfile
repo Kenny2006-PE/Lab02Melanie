@@ -1,29 +1,27 @@
-sudo apt install -y git
-git config -l
-git config --global user.email "email@dominio.com"
-git config -l
-ssh-keygen -t rsa -b 4096 -C "youremail@example.com"
+FROM php:8.2-fpm
 
-cat /home/alumno/.ssh/id_rsa.pub
-Copiar la llave en:
-Perfil >> Setting >> SSH and GPG  Keys >> SSH keys >> New SSH Key
-Agregar la llave copiada
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    libpng-dev \
+    libjpeg62-turbo-dev \
+    libfreetype6-dev \
+    locales \
+    zip \
+    jpegoptim optipng pngquant gifsicle \
+    vim unzip git curl \
+    libpq-dev \
+    && docker-php-ext-install pdo pdo_pgsql
 
-sudo vi /home/alumno/.ssh/config
-# Agregar:
-Host *
-  AddKeysToAgent yes
-  #UseKeychain yes // Sólo para mac
-  IdentityFile ~/.ssh/id_rsa
+COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
-Agregando la llave
-eval $(ssh-agent -s)
-ssh-add /home/alumno/.ssh/id_rsa
+WORKDIR /var/www
 
-cd /var/www/html/laravel/app01/
-git init .
-git add .
-git remote add origin git@github.com:gdiazes/laravel.git
-git remote -v
-git remote set-url origin git@github.com:gdiazes/laravelapp.git
-git push origin main
+COPY . .
+
+RUN composer install --no-dev --optimize-autoloader
+
+RUN chown -R www-data:www-data /var/www \
+    && chmod -R 755 /var/www/storage
+
+EXPOSE 9000
+CMD ["php-fpm"]
